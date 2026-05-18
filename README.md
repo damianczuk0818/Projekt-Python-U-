@@ -66,6 +66,14 @@ A Discord bot for organizing **5v5 Valorant scrim matches** on your server. Supp
 - Python 3.10+
 - [disnake](https://github.com/DisnakeDev/disnake) library
 
+### Installation
+
+```bash
+git clone https://github.com/your-username/cx-valorant-bot.git
+cd cx-valorant-bot
+pip install disnake discord.py
+```
+
 
 ## 📁 Data Storage
 
