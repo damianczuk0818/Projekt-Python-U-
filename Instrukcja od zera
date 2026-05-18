@@ -1,0 +1,62 @@
+# Instrukcja testowania bota — krok po kroku
+
+Poniżej znajdziesz prosty przewodnik jak zainstalować Discord, dołączyć do serwera testowego i przetestować bota. Nie musisz znać gry Valorant — bot służy po prostu do organizowania drużyn i meczów, a podczas testów będziemy symulować graczy za pomocą innych botów.
+
+---
+
+## Krok 1 — Zainstaluj Discord
+
+1. Wejdź na stronę: **https://discord.com/download**
+2. Kliknij **„Download for Windows"** (lub Mac, jeśli używasz Maca)
+3. Zainstaluj pobraną aplikację i uruchom ją
+4. Kliknij **„Register"** (Zarejestruj się), podaj e-mail, nazwę użytkownika i hasło
+5. Potwierdź rejestrację klikając w link wysłany na Twój e-mail
+
+> 💡 Discord to darmowa aplikacja do komunikacji, popularna wśród graczy — działa jak połączenie komunikatora i czatu grupowego.
+
+---
+
+## Krok 2 — Dołącz do serwera testowego
+
+Po rejestracji i zalogowaniu:
+
+1. Po lewej stronie aplikacji znajdziesz zielony przycisk **„+"** (Dodaj serwer)
+2. Wybierz opcję **„Dołącz do serwera"**
+3. Wklej link do serwera, który wyślę Ci oddzielnie
+4. Kliknij **„Dołącz"**
+
+> Serwer to zamknięta przestrzeń na Discordzie — coś w rodzaju prywatnego pokoju czatu. Ja go utworzę i dodam Cię przed spotkaniem.
+
+---
+
+## Krok 3 — Co zobaczysz na serwerze
+
+Po dołączeniu zobaczysz:
+- **Kanały tekstowe** po lewej stronie (np. `#mecze`) — tu będziemy wpisywać komendy do bota
+- **Bota CX Valorant** — widoczny na liście członków po prawej stronie (zielona kropka = bot jest online i gotowy do użycia)
+- **Dodatkowe boty** — dodane przeze mnie na potrzeby testów, udające graczy (łącznie 8 botów + my dwaj = 10 „graczy" wymaganych do meczu)
+
+---
+
+## Krok 4 — Jak działa bot (w skrócie)
+
+Bot organizuje wirtualne mecze 5 vs 5 (dwie drużyny po 5 graczy). Żeby mecz mógł się odbyć, na serwerze musi być **10 uczestników** — w tym **2 kapitanów** (my dwaj), którzy tworzą drużyny i zarządzają meczem. Pozostałe 8 miejsc zajmą boty testowe.
+
+Cała obsługa odbywa się przez **komendy z ukośnikiem**, np.:
+- `/create_party nazwa` — tworzysz swoją drużynę
+- `/join_queue` — dołączasz do kolejki oczekujących na mecz
+- `/report_loss` — zgłaszasz przegraną po zakończeniu meczu
+
+Komendy wpisuje się w kanale tekstowym jak zwykłą wiadomość.
+
+---
+
+## Krok 5 — Spotkanie na Teams
+
+Jeśli zajdzie potrzeba, spotkajmy się na Microsoft Teams. Ja uruchomię bota (gdy zobaczysz go jako „online" na liście członków serwera — zielona kropka przy nazwie — bot jest aktywny i gotowy), a następnie przeprowadzimy test razem, krok po kroku.
+
+**Nie trzeba nic przygotowywać z wyprzedzeniem** — wystarczy zainstalowany Discord i dostęp do serwera testowego.
+
+---
+
+W razie jakichkolwiek pytań lub problemów z instalacją proszę śmiało pisać.
