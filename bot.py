@@ -44,6 +44,11 @@ map_images = {
 
 @bot.event
 async def on_ready():
+    """
+    Called automatically when the bot logs in to Discord.
+    Prints the bot's name to the console and loads win data
+    and games played data from text files.
+    """
     print(f'Logged in as {bot.user}')
     load_wins_from_file()
     load_games_from_file()
@@ -51,6 +56,11 @@ async def on_ready():
 
 @bot.check
 async def globally_check_channel(ctx):
+    """
+    A global check executed before every bot command.
+    Verifies whether the command was used in an allowed channel (ALLOWED_CHANNEL_ID).
+    If not — sends an informational message and blocks command execution.
+    """
     if ctx.channel.id not in ALLOWED_CHANNEL_ID:
         await ctx.send(f"This bot can only be used in <#1249849043614568509> channel.")
         return False
@@ -59,6 +69,16 @@ async def globally_check_channel(ctx):
 
 @bot.slash_command(name='force', description='Forcefully add a player to your party')
 async def force(ctx, player_name: str):
+    """
+    Slash command /force — forcefully adds a player to a party.
+    Only the party leader can use this command.
+    Searches for the player by name on the server and adds them directly to the party,
+    without sending an invitation. The party must not be full (max 10 players),
+    and the player must not already be in another party.
+
+    Parameters:
+        player_name (str): The Discord username of the player to add.
+    """
     if ctx.author.id not in user_parties:
         await ctx.send("You must be part of a party to force add a player.")
         return
@@ -100,6 +120,14 @@ async def force(ctx, player_name: str):
 
 @bot.slash_command(name='create_party', description='Create a new party')
 async def create_party(ctx, name: str):
+    """
+    Slash command /create_party — creates a new party with the given name.
+    The user must not already have an active party (it must be disbanded first).
+    The party name must be unique. The creator automatically becomes the leader.
+
+    Parameters:
+        name (str): The name of the new party.
+    """
     if ctx.author.id in user_parties:
         # Check if the user is already associated with a party
         if user_parties[ctx.author.id] in parties:
@@ -121,6 +149,17 @@ async def create_party(ctx, name: str):
 
 @bot.slash_command(name='invite_user', description='Invite user to your party')
 async def invite_user(ctx, inviting_party_name: str, invited_user_name: str):
+    """
+    Slash command /invite_user — sends a party invitation.
+    Only the party leader can invite players.
+    The party must not be full (max 10 players), and the invited player
+    must not already be in another party. The invitation is stored in
+    pending_invitations and waits for acceptance via /accept.
+
+    Parameters:
+        inviting_party_name (str): The name of the party sending the invitation.
+        invited_user_name (str): The Discord username of the player to invite.
+    """
     if inviting_party_name not in parties:
         await ctx.send("The party you are trying to invite from does not exist.")
         return
@@ -151,6 +190,15 @@ async def invite_user(ctx, inviting_party_name: str, invited_user_name: str):
 
 @bot.slash_command(name='accept', description='accept an invitation')
 async def accept(ctx, inviting_party_name: str):
+    """
+    Slash command /accept — accepts a party invitation.
+    If the player has their own party, their entire party is merged with the inviting one
+    (provided the total number of players does not exceed 10).
+    If the player has no party, they join the specified party alone.
+
+    Parameters:
+        inviting_party_name (str): The name of the party whose invitation is being accepted.
+    """
     if inviting_party_name not in parties:
         await ctx.send(f"Party '{inviting_party_name}' does not exist.")
         return
@@ -203,6 +251,16 @@ async def merge_party(
         required=True
     )
 ):
+    """
+    Slash command /merge_party — sends a party merge request.
+    Only the party leader can send a merge request.
+    The combined number of players from both parties must not exceed 10.
+    The other party must confirm the merge via /confirm_merge.
+    After merging, players from the invited party are transferred to the requesting party.
+
+    Parameters:
+        invited_party_name (str): The name of the party to merge with.
+    """
     if invited_party_name not in parties:
         await ctx.send(f"Party '{invited_party_name}' does not exist.")
         return
@@ -240,6 +298,12 @@ async def merge_party(
 
 @bot.slash_command(name='confirm_merge',description='Accept request about merging their party into yours')
 async def confirm_merge(ctx: disnake.ApplicationCommandInteraction):
+    """
+    Slash command /confirm_merge — confirms a party merge request.
+    Only the leader of the party that received the merge request can confirm it.
+    After confirmation, players from the requesting party are transferred to this party.
+    The combined number of players must not exceed 10.
+    """
     if ctx.author.id not in user_parties:
         await ctx.send("You must be part of a party to confirm a merge.", ephemeral=True)
         return
@@ -285,6 +349,14 @@ async def confirm_merge(ctx: disnake.ApplicationCommandInteraction):
 
 @bot.slash_command(name='show_party', description='show party members')
 async def show_party(ctx, name: str = None):
+    """
+    Slash command /show_party — displays the list of party members.
+    If no name is provided, shows the party of the calling user.
+    If a name is provided, shows the members of the specified party.
+
+    Parameters:
+        name (str, optional): The name of the party to look up.
+    """
     if name is None:
         # If no name is provided, check the party of the player invoking the command
         player_id = ctx.author.id
@@ -313,6 +385,14 @@ async def show_party(ctx, name: str = None):
 
 @bot.slash_command(name='join_queue', description='Join the queue')
 async def join_queue(ctx: disnake.ApplicationCommandInteraction):
+    """
+    Slash command /join_queue — joins the match queue with the party.
+    Only the party leader can join the queue.
+    The party must have exactly 5 or 10 players.
+    If the queue is partially filled and adding the party would exceed 10 players,
+    the party is placed in a new queue. When the queue reaches 10 players, the ban phase begins.
+    Players are automatically removed from the queue after 20 minutes of inactivity (anti-AFK).
+    """
     if ctx.author.id not in user_parties:
         await ctx.send(content="You must be part of a party to join the queue.", ephemeral=True)
         return
@@ -375,6 +455,16 @@ async def join_queue(ctx: disnake.ApplicationCommandInteraction):
         party_join_times[party_name] = asyncio.create_task(schedule_queue_removal(ctx, party_name, current_queue))
 
 async def schedule_queue_removal(ctx, party_name, queue):
+    """
+    Internal async function — removes a party from the queue after 20 minutes.
+    Called automatically when a party joins the queue (anti-AFK system).
+    If the party is still in the queue after 20 minutes, it is removed.
+
+    Parameters:
+        ctx: Discord command context.
+        party_name (str): The name of the party to remove.
+        queue (list): Reference to the queue (current_queue or new_queue).
+    """
     await asyncio.sleep(20 * 60)  # Wait for 20 minutes
 
     # Check if the party is still in the queue
@@ -392,6 +482,10 @@ async def schedule_queue_removal(ctx, party_name, queue):
 
 @bot.slash_command(name='queue', description='inspect players in queue')
 async def queue(ctx):
+    """
+    Slash command /queue — displays the current state of the queue.
+    Shows the number of players in the queue and mentions them.
+    """
     queue_length = len(current_queue)
     queue_members = ', '.join([member.mention for member in current_queue])
     await ctx.send(f"> 5v5 **[{queue_length}/10]** Players: {queue_members}")
@@ -399,6 +493,11 @@ async def queue(ctx):
 
 @bot.slash_command(name='leave_queue', description='leave queue with your party')
 async def leave_queue(ctx: disnake.ApplicationCommandInteraction):
+    """
+    Slash command /leave_queue — leaves the queue with the entire party.
+    Only the party leader can leave the queue.
+    Removes all party members from the active queue.
+    """
     if ctx.author.id not in user_parties:
         await ctx.send("You must be part of a party to leave the queue.",ephemeral=True)
         return
@@ -429,12 +528,25 @@ async def leave_queue(ctx: disnake.ApplicationCommandInteraction):
 
 
 def save_wins_to_file(user_wins):
+    """
+    Saves the player win dictionary to the file 'user_wins.txt'.
+    Each line format: 'user_id:win_count'.
+
+    Parameters:
+        user_wins (dict): Dictionary {user_id: win_count}.
+    """
     with open('user_wins.txt', 'w') as file:
         for user, wins in user_wins.items():
             file.write(f"{user}:{wins}\n")
 
 
 def load_wins_from_file():
+    """
+    Loads player win data from 'user_wins.txt' into the global user_wins dictionary.
+    File format: each line is 'user_id:win_count'.
+    Malformed lines are skipped with a console message.
+    If the file does not exist, starts with an empty dictionary.
+    """
     global user_wins
     try:
         with open('user_wins.txt', 'r') as file:
@@ -451,12 +563,25 @@ def load_wins_from_file():
 
 
 def save_games_to_file(user_games):
+    """
+    Saves the games played dictionary to the file 'user_games.txt'.
+    Each line format: 'user_id:game_count'.
+
+    Parameters:
+        user_games (dict): Dictionary {user_id: games_played_count}.
+    """
     with open('user_games.txt', 'w') as file:
         for user, games in user_games.items():
             file.write(f"{user}:{games}\n")
 
 
 def load_games_from_file():
+    """
+    Loads games played data from 'user_games.txt' into the global user_games dictionary.
+    File format: each line is 'user_id:game_count'.
+    Malformed lines are skipped with a console message.
+    If the file does not exist, starts with an empty dictionary.
+    """
     global user_games
     try:
         with open('user_games.txt', 'r') as file:
@@ -474,6 +599,13 @@ def load_games_from_file():
 
 @bot.slash_command(name='report_loss', description='Report your team\'s loss')
 async def report_loss(inter):
+    """
+    Slash command /report_loss — reports your team's loss.
+    Can only be used by the leader of Team A (position 0) or Team B (position 5) in the lobby.
+    Does not work during an active ban phase.
+    Automatically awards a win to the opposing team, updates statistics
+    (wins and games played) and saves them to files. Removes the lobby after completion.
+    """
     print(f"User {inter.author.id} invoked /report_loss")
 
     if inter.author.id not in user_parties:
@@ -566,6 +698,12 @@ async def report_loss(inter):
 
 @bot.slash_command(name='wins', description='Wins leaderboard')
 async def wins(inter):
+    """
+    Slash command /wins — displays the wins leaderboard.
+    Shows the top 10 players with the most wins.
+    Appends the calling user's own score at the end.
+    Data is loaded from the 'user_wins.txt' file.
+    """
     user_wins = {}
 
     # Read user wins from the file
@@ -617,6 +755,15 @@ async def wins(inter):
 
 @bot.slash_command(name='stats', description='Your game statistics')
 async def stats(inter, nickname: str = None):
+    """
+    Slash command /stats — displays a player's statistics.
+    Shows the number of games played, wins, and win rate (%).
+    If a nickname is provided, shows that player's stats.
+    If not provided, shows the calling user's stats.
+
+    Parameters:
+        nickname (str, optional): The Discord username of the player to look up.
+    """
     load_wins_from_file()
     load_games_from_file()
 
@@ -648,6 +795,13 @@ async def stats(inter, nickname: str = None):
 
 @bot.slash_command(name='abort', description='Send request about match abort')
 async def abort(ctx):
+    """
+    Slash command /abort — initiates or confirms a match abort.
+    Only the leader of Team A (position 0) or Team B (position 5) can use this command.
+    Works both during the ban phase and after it ends.
+    The match is aborted only when both leaders have used /abort.
+    The lobby is removed after the abort.
+    """
     if ctx.author.id not in user_parties:
         await ctx.send("You must be part of a party to initiate an abort request.", ephemeral=True)
         return
@@ -702,6 +856,15 @@ async def abort(ctx):
 
 @bot.slash_command(name='ban', description='Ban a map during ban phase')
 async def ban(ctx, map_name: str):
+    """
+    Slash command /ban — bans a map during the ban phase.
+    Players take turns banning maps: first Team B leader (position 5), then Team A (position 0), and so on.
+    The map must be from the list of allowed maps (allowed_maps).
+    After 10 maps have been banned, the last remaining map is played — the bot displays match details.
+
+    Parameters:
+        map_name (str): The name of the map to ban (e.g. Bind, Haven, Split...).
+    """
     if ctx.author.id not in user_parties:
         await ctx.send("You must be in a party to ban a map.")
         return
@@ -795,6 +958,12 @@ async def ban(ctx, map_name: str):
 
 @bot.slash_command(name='party_leave', description='leave your party')
 async def party_leave(ctx):
+    """
+    Slash command /party_leave — leaves the party as a regular member.
+    The leader cannot use this command — they must use /party_remove to disband the party.
+    Cannot leave a party during an active ban phase.
+    If the party becomes empty after leaving, it is deleted.
+    """
     if ctx.author not in user_parties:
         await ctx.send("You can't leave try /party_remove .")
         return
@@ -820,6 +989,12 @@ async def party_leave(ctx):
 
 @bot.slash_command(name='party_remove', description='Disband your whole party')
 async def party_remove(ctx):
+    """
+    Slash command /party_remove — disbands the entire party.
+    Only the party leader can use this command.
+    Cannot disband a party during an active ban phase.
+    Removes all members from user_parties and the party itself from parties.
+    """
     if ctx.author.id not in user_parties:
         await ctx.send("You are not in a party.")
         return
@@ -853,6 +1028,11 @@ async def party_remove(ctx):
 
 @bot.slash_command(name='lobby', description='display players that are already in match lobby')
 async def lobby(ctx):
+    """
+    Slash command /lobby — displays currently active lobbies with their players.
+    Shows all players in each lobby with their mentions.
+    If there are no active lobbies, informs the user.
+    """
     if not lobbies:
         await ctx.send("There are currently no active lobbies.")
         return
@@ -863,6 +1043,16 @@ async def lobby(ctx):
 
 
 async def start_ban_phase(ctx, queue):
+    """
+    Internal async function — starts the map ban phase for a lobby.
+    Creates a new lobby with 10 players from the queue, then clears the queue.
+    Prompts the sixth player (Team B leader) for the first ban.
+    Lobby structure: members, bans, ban_turn, ban_phase_active.
+
+    Parameters:
+        ctx: Discord command context.
+        queue (list): List of 10 players ready to play.
+    """
     global current_queue, new_queue
 
     lobby_id = len(lobbies) + 1
@@ -884,6 +1074,16 @@ async def start_ban_phase(ctx, queue):
     sixth_player = lobby['members'][5]
     await ctx.send(f"{sixth_player.mention}, 1st ban is yours. Use `/ban Mapname` to ban a map.\n /maps to check all available maps")
 async def send_match_details(ctx, lobby_id, map_name):
+    """
+    Internal async function — sends an embed with match details after the ban phase ends.
+    Splits 10 players into two teams (A: 1–5, B: 6–10), randomly selects attack/defense side.
+    The embed includes: player lists for both teams, the selected map with its image, and the side roll result.
+
+    Parameters:
+        ctx: Discord command context.
+        lobby_id (int): The ID of the lobby for which details are being sent.
+        map_name (str): The name of the map to be played.
+    """
     lobby = lobbies[lobby_id]
     team_a = lobby['members'][:5]
     team_b = lobby['members'][5:]
@@ -907,12 +1107,23 @@ async def send_match_details(ctx, lobby_id, map_name):
 
 @bot.slash_command(name='maps', description='show all maps')
 async def maps(ctx):
+    """
+    Slash command /maps — displays the list of all available maps for banning.
+    The response is ephemeral (visible only to the calling user).
+    """
     map_list = "\n".join([f"- {map_name}" for map_name in allowed_maps])
     await ctx.send(f"Available maps:\n{map_list}",ephemeral=True)
 
 @bot.slash_command(name='commands', description='display more info about commands')
 async def commands(ctx, command=None):
+    """
+    Slash command /commands — displays a detailed list of all bot commands.
+    The response is ephemeral (visible only to the calling user).
+    Includes parameter descriptions and usage examples for each command.
 
+    Parameters:
+        command (str, optional): Reserved for future use — help for a specific command.
+    """
     if command is None:
         help_message = """```fix\nAvailable commands:\n
 /create_party (PartyName) - Create a new party.
